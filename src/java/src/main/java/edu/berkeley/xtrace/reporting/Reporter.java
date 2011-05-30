@@ -60,10 +60,16 @@ public abstract class Reporter
 
 			if (systemprop == null) {
 				systemprop = "edu.berkeley.xtrace.reporting.UdpReporter";
+				//systemprop = "edu.berkeley.xtrace.reporting.SyslogUdpReporter";
+				//systemprop = "edu.berkeley.xtrace.reporting.FileReporter";
+
 			}
 
 			try {
 				reporter = (Reporter) (Class.forName(systemprop)).newInstance();
+        /*if (reporter instanceof UdpReporter)
+          reporter = new BufferedUdpReporter((UdpReporter) reporter);*/
+
 				
 			} catch (InstantiationException e) {
 				//LOG.warn("Unable to instantiate reporting class: " + systemprop, e);

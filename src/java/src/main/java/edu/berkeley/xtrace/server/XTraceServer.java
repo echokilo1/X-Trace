@@ -115,7 +115,7 @@ public final class XTraceServer {
 
 	private static void setupReportSources() {
 		
-		incomingReportQueue = new ArrayBlockingQueue<String>(1024, true);
+		incomingReportQueue = new ArrayBlockingQueue<String>(65536, true);
 		sourcesExecutor = new ThreadPerTaskExecutor();
 		
 		// Default input sources
@@ -158,7 +158,7 @@ public final class XTraceServer {
 	}
 	
 	private static void setupReportStore() {
-		reportsToStorageQueue = new ArrayBlockingQueue<String>(1024);
+		reportsToStorageQueue = new ArrayBlockingQueue<String>(65536);
 		
 		String storeStr = "edu.berkeley.xtrace.server.FileTreeReportStore";
 		if (System.getProperty("xtrace.server.store") != null) {
@@ -219,7 +219,15 @@ public final class XTraceServer {
 						LOG.warn("Interrupted", e);
 						continue;
 					}
-					reportsToStorageQueue.offer(msg);
+          while(true) {
+            try {
+					    reportsToStorageQueue.put(msg);
+              break;
+            } catch (Exception e) {
+              continue;
+            }
+          }
+					//reportsToStorageQueue.offer(msg);
 				}
 			}
 		}).start();

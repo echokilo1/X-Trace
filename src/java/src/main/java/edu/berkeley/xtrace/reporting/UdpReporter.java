@@ -28,6 +28,7 @@
 package edu.berkeley.xtrace.reporting;
 
 import java.io.IOException;
+import java.io.*;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -57,9 +58,9 @@ public final class UdpReporter extends Reporter
 	//private static final Logger LOG = Logger.getLogger(UdpReporter.class);
 
 	/* Local report daemon state */
-	private DatagramSocket localSock;
-	private InetAddress localAddr;
-	private int localPort;
+	public DatagramSocket localSock;
+	public InetAddress localAddr;
+	public int localPort;
 	
 	UdpReporter()
 	{
@@ -87,6 +88,8 @@ public final class UdpReporter extends Reporter
 				//LOG.warn("Invalid xtrace.udpdest property. Expected host:port.", e);
 			}
 		}
+
+    System.out.println(udp_ip + ":" + udp_port);
 		
 		// Setup the UDP sending host
 		try {
@@ -129,6 +132,8 @@ public final class UdpReporter extends Reporter
 		}
 		
 		byte[] msg;
+    ByteArrayOutputStream arr = new ByteArrayOutputStream();
+    DataOutputStream wrap = new DataOutputStream(arr);
 		try {
 			msg = r.toString().getBytes("UTF-8");
 		} catch (UnsupportedEncodingException e1) {
@@ -136,12 +141,28 @@ public final class UdpReporter extends Reporter
 			// We use the default encoding if UTF-8 is unavailable
 			msg = r.toString().getBytes();
 		}
+    try {
+      wrap.writeInt(msg.length);
+      wrap.write(msg);
+    } catch (IOException e) {
+      return;
+    }
+    msg = arr.toByteArray();
 		DatagramPacket pkt =
 			new DatagramPacket(msg, 0, msg.length, localAddr, localPort);
+    /*while(true) {
+		  try {
+		    localSock.send(pkt);
+        break;
+		  } catch (final IOException e) {
+        System.out.println("UDP sucks");
+			  //LOG.warn("Unable to send report", e);
+      }
+    }*/
 		try {
-			localSock.send(pkt);
+		  localSock.send(pkt);
 		} catch (final IOException e) {
-			//LOG.warn("Unable to send report", e);
+			  //LOG.warn("Unable to send report", e);
 		}
 	}
 }
