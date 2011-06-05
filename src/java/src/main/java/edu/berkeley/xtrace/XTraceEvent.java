@@ -132,6 +132,14 @@ public class XTraceEvent {
 		// bytes, rather than just the reference.
 		myOpId = xtr.getOpId();
 		report.put("X-Trace", xtr.toString(), false);
+    /*try {
+      if (xtr.toString().length() != 34) {
+        throw new Exception("Invalid length");
+      }
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      e.printStackTrace();
+    }*/
 	}
 	
 	/**

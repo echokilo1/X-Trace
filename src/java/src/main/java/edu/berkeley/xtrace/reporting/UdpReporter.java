@@ -89,8 +89,6 @@ public final class UdpReporter extends Reporter
 			}
 		}
 
-    System.out.println(udp_ip + ":" + udp_port);
-		
 		// Setup the UDP sending host
 		try {
 			this.localAddr = InetAddress.getByName(udp_ip);

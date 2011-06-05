@@ -71,6 +71,14 @@ public class XTraceContext {
 		}
 	};
 
+  private static ThreadLocal<Integer> refs
+    = new ThreadLocal<Integer>() {
+      @Override
+      protected Integer initialValue() {
+        return 0;
+      }
+    };
+
   private static ThreadLocal<Random> random
     = new ThreadLocal<Random>() {
     @Override
@@ -389,16 +397,28 @@ public class XTraceContext {
   /* Request level sampling */
   
   public static void newTrace() {
+    if (context.get() != null && refs.get() > 0) {
+      refs.set(refs.get() + 1);
+      return;
+    }
     if (random.get().nextInt(100) < sampleRate) {
       TaskID taskId = new TaskID(8);
       setThreadContext(new XTraceMetadata(taskId, 0L));
+      refs.set(1);
     }
-    else
+    else {
       setThreadContext(null);
+      refs.set(0);
+    }
   }
 
   public static void endTrace() {
-    setThreadContext(null);
+    if (context.get() != null)
+      refs.set(refs.get() - 1);
+    if (refs.get() < 1) {
+      setThreadContext(null);
+      refs.set(0);
+    }
   }
 
   /* Function calls */
@@ -532,12 +552,9 @@ public class XTraceContext {
   }
 
   /* Data Transfer */
-  //Sequence numbers are removed for compression purposes
   public static XTraceMetadata sendPacket(String agent, long seqno, XTraceMetadata previousSend) {
     if (context.get()==null)
       return null;
-    //System.out.println("Send packet " + seqno);
-    //XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET_" + seqno);
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET");
     if (previousSend != null)
       event.addEdge(previousSend);
@@ -548,8 +565,6 @@ public class XTraceContext {
   public static XTraceMetadata acceptPacket(String agent, long seqno, XTraceMetadata previousAccept) {
     if (context.get()==null)
       return null;
-    //System.out.println("Accept packet " + seqno);
-    //XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_PACKET_" + seqno);
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_PACKET");
     if (previousAccept != null)
       event.addEdge(previousAccept);
@@ -560,8 +575,6 @@ public class XTraceContext {
   public static XTraceMetadata receivePacket(String agent, long seqno) {
     if (context.get()==null)
       return null;
-    //System.out.println("Receive packet " + seqno);
-    //XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_PACKET_" + seqno);
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_PACKET");
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
@@ -570,8 +583,6 @@ public class XTraceContext {
   public static XTraceMetadata sendAck(String agent, long seqno, XTraceMetadata previousAck) {
     if (context.get()==null)
       return null;
-    //System.out.println("Send ack " + seqno);
-    //XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK_" + seqno);
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK");
     if (previousAck != null)
       event.addEdge(previousAck);
@@ -582,8 +593,6 @@ public class XTraceContext {
   public static XTraceMetadata acceptAck(String agent, long seqno, XTraceMetadata previousAccept) {
     if (context.get()==null)
       return null;
-    //System.out.println("Accept ack " + seqno);
-    //XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK_" + seqno);
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK");
     if (previousAccept != null)
       event.addEdge(previousAccept);
@@ -594,8 +603,6 @@ public class XTraceContext {
   public static XTraceMetadata receiveAck(String agent, long seqno) {
     if (context.get()==null)
       return null;
-    //System.out.println("Receive ack " + seqno);
-    //XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_ACK_" + seqno);
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_ACK");
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
@@ -806,482 +813,9 @@ public class XTraceContext {
     return event.getNewMetadata();
   }
 
-
-  /*public static XTraceEvent startOp(String agent, String op) {
-    TaskID taskId = new TaskID(8);
-    setThreadContext(new XTraceMetadata(taskId, 0L));
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + op.toUpperCase() + "_START");
-    event.put("Title", op);
-    event.sendReport();
-    return event;
-  }
-  
-  public static XTraceEvent startOp(boolean useThreadLocalStorage, String agent, String op) {
-    TaskID taskId = new TaskID(8);
-    XTraceMetadata metadata = new XTraceMetadata(taskId, 0L);
-    if (useThreadLocalStorage) {
-      setThreadContext(metadata);
-      XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + op.toUpperCase() + "_START");
-      event.put("Title", op);
-      event.sendReport();
-      return event;
-    }
-    XTraceEvent event = new XTraceEvent(metadata.getOpIdLength());
-    event.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    event.put("Title", op);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase() + "_" + op.toUpperCase() + "_START");
-    event.sendReport();
-    return event;
-  }
-
-  public static XTraceEvent startOp(XTraceMetadata metadata, String agent, String op) {
-    if (metadata == null || !metadata.isValid())
-      return null;
-    XTraceEvent event = new XTraceEvent(metadata.getOpIdLength());
-    event.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase() + "_" + op.toUpperCase() + "_START");
-    event.sendReport();
-    return event;
-  }
-  
-  public static XTraceEvent startOp(boolean useThreadLocalStorage, String agent, String op, String... tags) {
-    TaskID taskId = new TaskID(8);
-    XTraceMetadata metadata = new XTraceMetadata(taskId, 0L);
-    if (useThreadLocalStorage) {
-      setThreadContext(metadata);
-      XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + op.toUpperCase() + "_START");
-      event.put("Title", op);
-		  for (String tag: tags)
-			  event.put("Tag", tag);
-      event.sendReport();
-      return event;
-    }
-    XTraceEvent event = new XTraceEvent(metadata.getOpIdLength());
-    event.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    event.put("Title", op);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase() + "_" + op.toUpperCase() + "_START");
-		for (String tag: tags)
-		  event.put("Tag", tag);
-    event.sendReport();
-    return event;
-  }
-  
-  public static XTraceEvent startOp(String agent, String op, String... tags) {
-    TaskID taskId = new TaskID(8);
-    setThreadContext(new XTraceMetadata(taskId, 0L));
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + op.toUpperCase() + "_START");
-    event.put("Title", op);
-		for (String tag: tags) {
-			event.put("Tag", tag);
-		}
-    event.sendReport();
-    getThreadContext().isStart = false;
-    return event;
-  }
-
-  public static XTraceEvent endOp(String agent, String op) {
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + op.toUpperCase() + "_END");
-    event.sendReport();
-    getThreadContext().isStart = false;
-    return event;
-  }
-
-  public static XTraceEvent endOp(XTraceMetadata metadata, String agent, String op) {
-    if (metadata == null || !metadata.isValid())
-      return null;
-    XTraceEvent event = new XTraceEvent(metadata.getOpIdLength());
-    event.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase() + "_" + op.toUpperCase() + "_END");
-    event.sendReport();
-    return event;
-  }
-
-  public static XTraceEvent handlePacket(String agent, long seqno, int action, boolean isAck) {
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-    String s = "";
-    switch(action) {
-      case 0:
-        s = "_SEND_";
-        break;
-      case 1:
-        s = "_RECEIVE_";
-        break;
-      case 2:
-        s = "_ACCEPT_";
-        break;
-      case 3:
-        s = "_REJECT_";
-        break;
-      default:
-        s = "_UNKNOWN_";
-    }
-		XTraceEvent event = createEvent(agent, agent.toUpperCase() + s + (isAck ? "ACK_" : "PACKET_") + seqno);
-    event.put("Sequence Number", String.valueOf(seqno));
-    event.sendReport();
-    getThreadContext().isStart = false;
-    return event;
-  }
-
-  public static XTraceEvent handlePacket(XTraceMetadata metadata, String agent, long seqno, int action, boolean isAck) {
-    if (metadata == null || !metadata.isValid())
-      return null;
-    String s = "";
-    switch(action) {
-      case 0:
-        s = "_SEND_";
-        break;
-      case 1:
-        s = "_RECEIVE_";
-        break;
-      case 2:
-        s = "_ACCEPT_";
-        break;
-      case 3:
-        s = "_REJECT_";
-        break;
-      default:
-        s = "_UNKNOWN_";
-    }
-    XTraceEvent event = new XTraceEvent(metadata.getOpIdLength());
-    event.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase() + s + (isAck ? "ACK_" : "PACKET_") + seqno);
-    event.put("Sequence Number", String.valueOf(seqno));
-    event.sendReport();
-    return event;
-  }
-  
-  public static XTraceEvent handlePacket(XTraceMetadata metadata, String agent, long seqno, int action, boolean isAck, XTraceMetadata previous) {
-    if (metadata == null || !metadata.isValid())
-      return null;
-    String s = "";
-    switch(action) {
-      case 0:
-        s = "_SEND_";
-        break;
-      case 1:
-        s = "_RECEIVE_";
-        break;
-      case 2:
-        s = "_ACCEPT_";
-        break;
-      case 3:
-        s = "_REJECT_";
-        break;
-      default:
-        s = "_UNKNOWN_";
-    }
-    XTraceEvent event = new XTraceEvent(metadata.getOpIdLength());
-    event.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase() + s + (isAck ? "ACK_" : "PACKET_") + seqno);
-    event.put("Sequence Number", String.valueOf(seqno));
-    if (previous != null && previous.isValid())
-      event.addEdge(previous);
-    event.sendReport();
-    return event;
-  }
-  
-  public static XTraceEvent handlePacket(String agent, long seqno, int action, boolean isAck, XTraceMetadata previous) {
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-    String s = "";
-    switch(action) {
-      case 0:
-        s = "_SEND_";
-        break;
-      case 1:
-        s = "_RECEIVE_";
-        break;
-      case 2:
-        s = "_ACCEPT_";
-        break;
-      case 3:
-        s = "_REJECT_";
-        break;
-      default:
-        s = "_UNKNOWN_";
-    }
-		XTraceEvent event = createEvent(agent, agent.toUpperCase() + s + (isAck ? "ACK_" : "PACKET_") + seqno);
-    event.put("Sequence Number", String.valueOf(seqno));
-    if (previous != null && previous.isValid())
-      event.addEdge(previous);
-    event.sendReport();
-    getThreadContext().isStart = false;
-    return event;
-  }
-
-	public static XTraceEvent callStart(String agent, String callType, boolean newTrace, String[] tags, Object[] args) {
-    if(newTrace) {
-		  TaskID taskId = new TaskID(8);
-		  setThreadContext(new XTraceMetadata(taskId, 0L));
-      newTrace = true;
-    }
-    if (!newTrace && (getThreadContext() == null || !getThreadContext().isValid())) {
-      return null;
-    }
-		XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
-    event.addEdge(getThreadContext());
-    event.callType = callType;
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    if (newTrace)
-		  event.put("Title", callType);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase()+"_"+callType.toUpperCase() + "_START");
-    if (tags != null) {
-		  for (int i=0; i<tags.length; i++) {
-			  event.put("Tag", tags[i]);
-		  }
-    }
-    if (args != null) {
-      for (int i=0; i<args.length/2; i++) {
-			  String key = args[2*i].toString();
-			  String value = args[2*i + 1].toString();
-			  event.put(key, value);
-		  }
-    }
-		event.sendReport();
-    setThreadContext(event.getNewMetadata());
-    getThreadContext().isStart = true;
-    return event;
-	}
-
-  public static XTraceEvent rpcStart() {
-    XTraceMetadata metadata = getThreadContext();
-    if (metadata == null || !metadata.isStart)
-      return null;
-    int opIdLength = metadata.getOpIdLength();
-    XTraceEvent rpcEvent = new XTraceEvent(opIdLength);
-    rpcEvent.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-		rpcEvent.put("Host", hostname);
-		rpcEvent.put("Label", "RPC_CALL");
-    rpcEvent.sendReport();
-    getThreadContext().isStart = false;
-    return rpcEvent;
-  }
-
-  public static XTraceEvent rpcEnd(XTraceMetadata metadata, String status) {
-    if (metadata == null || !metadata.isValid())
-      return null;
-    int opIdLength = metadata.getOpIdLength();
-    XTraceEvent rpcEnd = new XTraceEvent(opIdLength);
-    rpcEnd.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    rpcEnd.put("Host", hostname);
-    rpcEnd.put("Label", "RPC_REPLY");
-    rpcEnd.put("Status", status);
-    rpcEnd.sendReport();
-    return rpcEnd;
-  }
-
-  public static XTraceEvent callEnd(String agent, String callType) {
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-    XTraceEvent e = createEvent(agent, agent.toUpperCase() + "_" + callType.toUpperCase() + "_END");
-    e.sendReport();
-    getThreadContext().isStart = false;
-    return e;
-  }
-  
-  public static XTraceEvent callEnd(String agent, String callType, Object... args) {
-    if (args.length % 2 != 0) {
-			throw new IllegalArgumentException(
-					"XTraceContext.callEnd requires an even number of arguments.");
-		}
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-    XTraceEvent retEvent = createEvent(agent, agent.toUpperCase() + "_" + callType.toUpperCase() + "_END");
-
-		for (int i=0; i<args.length/2; i++) {
-			String key = args[2*i].toString();
-			String value = args[2*i + 1].toString();
-			retEvent.put(key, value);
-		}
-    retEvent.sendReport();
-    getThreadContext().isStart = false;
-    return retEvent;
-  }
-
-  public static XTraceEvent cacheStart(String cacheType) {
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-		
-    int opIdLength = getThreadContext().getOpIdLength();
-		XTraceEvent cacheEvent = new XTraceEvent(opIdLength);
-    
-    cacheEvent.addEdge(getThreadContext());
-		
-    try {
-			if (hostname == null) {
-				hostname = InetAddress.getLocalHost().getHostName();
-			}
-		} catch (UnknownHostException e) {
-			hostname = "unknown";
-		}
-
-		cacheEvent.put("Host", hostname);
-		cacheEvent.put("Label", cacheType.toUpperCase() + "_CACHE_ACCESS_START");
-    cacheEvent.sendReport();
-    setThreadContext(cacheEvent.getNewMetadata());
-    getThreadContext().isStart = false;
-    return cacheEvent;
-  }
-  public static XTraceEvent cacheEnd(String cacheType, boolean isHit) {
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-		
-    int opIdLength = getThreadContext().getOpIdLength();
-		XTraceEvent cacheEvent = new XTraceEvent(opIdLength);
-    
-    cacheEvent.addEdge(getThreadContext());
-		
-    try {
-			if (hostname == null) {
-				hostname = InetAddress.getLocalHost().getHostName();
-			}
-		} catch (UnknownHostException e) {
-			hostname = "unknown";
-		}
-
-		cacheEvent.put("Host", hostname);
-		cacheEvent.put("Label", cacheType.toUpperCase() + "_CACHE_" + (isHit ? "HIT" : "MISS"));
-    cacheEvent.sendReport();
-    setThreadContext(cacheEvent.getNewMetadata());
-    getThreadContext().isStart = false;
-    return cacheEvent;
-  }*/
-
 	public static int getDefaultOpIdLength() {
 		return defaultOpIdLength;
 	}
-
-  /*public static XTraceEvent dataOp(String agent, String op, String action, Object[] args) {
-    if (getThreadContext() == null || !getThreadContext().isValid())
-      return null;
-		
-    int opIdLength = getThreadContext().getOpIdLength();
-		XTraceEvent opEvent = new XTraceEvent(opIdLength);
-    
-    opEvent.addEdge(getThreadContext());
-		
-    try {
-			if (hostname == null) {
-				hostname = InetAddress.getLocalHost().getHostName();
-			}
-		} catch (UnknownHostException e) {
-			hostname = "unknown";
-		}
-
-		opEvent.put("Host", hostname);
-    opEvent.put("Agent", agent);
-		opEvent.put("Label",  agent.toUpperCase() + "_" + op.toUpperCase() + "_" + action.toUpperCase());
-    if (args!=null && args.length % 2 == 0)
-      for(int i = 0; i < args.length; i+=2)
-        opEvent.put(args[i].toString(), args[i+1].toString());
-    opEvent.sendReport();
-    setThreadContext(opEvent.getNewMetadata());
-    getThreadContext().isStart = false;
-    return opEvent;
-  }
-
-  public static XTraceEvent dataOp(XTraceMetadata metadata, String agent, String op, String action, Object[] args) {
-    if (metadata == null || !metadata.isValid()) {
-      TaskID taskId = new TaskID(8);
-      metadata = new XTraceMetadata(taskId, 0L);
-    }
-    XTraceEvent event = new XTraceEvent(metadata.getOpIdLength());
-    event.addEdge(metadata);
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-    event.put("Host", hostname);
-    event.put("Agent", agent);
-    event.put("Label", agent.toUpperCase() + "_" + op.toUpperCase() + "_" + action.toUpperCase());
-    if (args!=null && args.length % 2 == 0)
-      for(int i = 0; i < args.length; i+=2)
-        event.put(args[i].toString(), args[i+1].toString());
-    event.sendReport();
-    return event;
-  }*/
 
 	public static void setDefaultOpIdLength(int defaultOpIdLength) {
 		XTraceContext.defaultOpIdLength = defaultOpIdLength;
