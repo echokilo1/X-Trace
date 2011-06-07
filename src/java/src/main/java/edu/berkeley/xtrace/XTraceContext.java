@@ -216,7 +216,7 @@ public class XTraceContext {
 
 		event.put("Host", hostname);
 		event.put("Agent", agent);
-		event.put("Label", label);
+		event.put("Label", hostname.toUpperCase() + "_" + label);
 
 		setThreadContext(event.getNewMetadata());
 		return event;
@@ -479,7 +479,7 @@ public class XTraceContext {
       hostname = "unknown";
 	  }
     event.put("Host", hostname);
-    event.put("Label", "RPC_REPLY");
+    event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "SUCCESS");
     event.sendReport();
     setThreadContext(event.getNewMetadata());
@@ -499,7 +499,7 @@ public class XTraceContext {
       hostname = "unknown";
 	  }
     event.put("Host", hostname);
-    event.put("Label", "RPC_REPLY");
+    event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "ERROR");
     event.sendReport();
     setThreadContext(event.getNewMetadata());
@@ -519,7 +519,7 @@ public class XTraceContext {
       hostname = "unknown";
 	  }
     event.put("Host", hostname);
-    event.put("Label", "RPC_REPLY");
+    event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "FATAL");
     event.sendReport();
     setThreadContext(event.getNewMetadata());
@@ -711,17 +711,7 @@ public class XTraceContext {
     if (context.get()==null)
       return null;
     byte[] md = getThreadContext().pack();
-    boolean isNew = true;
-    for (int i = md.length - 8; i < md.length; i++)
-      if (md[i] != 0) {
-        isNew = false;
-        break;
-      }
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_NEW_BLOCK");
-    if (isNew) {
-      event.put("Title", "New Block");
-      event.put("Tag", "block");
-    }
     event.sendReport();
     return event.getNewMetadata();
   }
@@ -729,17 +719,7 @@ public class XTraceContext {
     if (context.get()==null)
       return null;
     byte[] md = getThreadContext().pack();
-    boolean isNew = true;
-    for (int i = md.length-8; i < md.length; i++)
-      if (md[i] != 0) {
-        isNew = false;
-        break;
-      }
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_APPEND_BLOCK");
-    if (isNew) {
-      event.put("Title", "New Block");
-      event.put("Tag", "block");
-    }
     event.sendReport();
     return event.getNewMetadata();
   }
@@ -780,7 +760,7 @@ public class XTraceContext {
     for (int i = 0; i < numCalls; i++) {
       XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
       event.addEdge(getThreadContext());
-      event.put("Label", label);
+      event.put("Label", hostname.toUpperCase() + "_" + label);
       event.put("Host", hostname);
       event.sendReport();
       metadata[i] = event.getNewMetadata();
@@ -804,7 +784,7 @@ public class XTraceContext {
       hostname = "unknown";
 	  }
     event.put("Host", hostname);
-    event.put("Label", label);
+    event.put("Label", hostname.toUpperCase() + "_" + label);
     for (int i = 0; i < metadata.length; i++)
       if (metadata[i] != null && metadata[i].isValid())
         event.addEdge(metadata[i]);
