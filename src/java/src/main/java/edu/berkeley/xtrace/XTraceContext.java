@@ -204,7 +204,7 @@ public class XTraceContext {
 		}
 		XTraceEvent event = new XTraceEvent(opIdLength);
 		
-		event.addEdge(oldContext);
+		//event.addEdge(oldContext);
 
 		try {
 			if (hostname == null) {
@@ -218,42 +218,9 @@ public class XTraceContext {
 		event.put("Agent", agent);
 		event.put("Label", hostname.toUpperCase() + "_" + label);
 
-		setThreadContext(event.getNewMetadata());
+		//setThreadContext(event.getNewMetadata());
 		return event;
 	}
-
-  /** Creates an RPC join event.  Assumes all events are valid
-   *
-   *  @param The set of RPC response events
-   */
-  /*public static XTraceEvent joinEvent(XTraceEvent[] events) {
-    if (events.length == 0)
-      return null;
-    if (events.length == 1) {
-      return events[0];
-    }
-    int opIdLength = events[0].getNewMetadata().getOpIdLength();
-    XTraceEvent joinEvent = new XTraceEvent(opIdLength);
-    for(int i = 0 ; i < events.length; i++) {
-      if (events[i] != null && events[i].getNewMetadata() != null && events[i].getNewMetadata().isValid())
-        joinEvent.addEdge(events[i].getNewMetadata());
-    }
-    try {
-	    if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getHostName();
-		  }
-	  } catch (UnknownHostException e) {
-      hostname = "unknown";
-	  }
-		joinEvent.put("Host", hostname);
-		joinEvent.put("Label", "RPC_JOIN");
-    joinEvent.sendReport();
-    return joinEvent;
-  }
-
-  public static XTraceEvent join(XTraceEvent[] events) {
-    return joinEvent(events);
-  }*/
 
 	/**
 	 * Is there a context set for the current thread?
@@ -384,6 +351,7 @@ public class XTraceContext {
 	}
 
 	public static void startTrace(String agent, String title, String... tags) {
+    //TODO: change
 		TaskID taskId = new TaskID(8);
 		setThreadContext(new XTraceMetadata(taskId, 0L));
 		XTraceEvent event = createEvent(agent, "Start Trace: " + title);
@@ -403,6 +371,7 @@ public class XTraceContext {
     }
     if (random.get().nextInt(100) < sampleRate) {
       TaskID taskId = new TaskID(8);
+      //TODO: change
       setThreadContext(new XTraceMetadata(taskId, 0L));
       refs.set(1);
     }
@@ -422,42 +391,30 @@ public class XTraceContext {
   }
 
   /* Function calls */
-  public static XTraceMetadata callStart(String agent, String name) {
+  public static void callStart(String agent, String name) {
     //System.out.println("callStart start");
     if (context.get()==null)
-      return null;
-    //Get rid of it, not necessary
-    byte[] md = getThreadContext().pack();
-    boolean isNew = true;
-    for (int i = md.length - 8; i < md.length; i++)
-      if (md[i] != 0) {
-        isNew = false;
-        break;
-      }
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + name.toUpperCase() + "_START");
-    if (isNew) {
-      event.put("Title", name);
-      event.put("Tag", name);
-    }
     event.sendReport();
     //System.out.println("callStart end");
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
-  public static XTraceMetadata callEnd(String agent, String name) {
+  public static void callEnd(String agent, String name) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + name.toUpperCase() + "_END");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
-  public static XTraceMetadata callError(String agent, String name) {
+  public static void callError(String agent, String name) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + name.toUpperCase() + "_ERROR");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
   /* RPC */
@@ -466,11 +423,11 @@ public class XTraceContext {
     return fork(numCalls, "RPC_CALL");
   }
 
-  public static XTraceMetadata rpcSuccess() {
+  public static void rpcSuccess() {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
-    event.addEdge(getThreadContext());
+    //event.addEdge(getThreadContext());
     try {
 	    if (hostname == null) {
         hostname = InetAddress.getLocalHost().getHostName();
@@ -482,15 +439,15 @@ public class XTraceContext {
     event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "SUCCESS");
     event.sendReport();
-    setThreadContext(event.getNewMetadata());
-    return event.getNewMetadata();
+    //setThreadContext(event.getNewMetadata());
+    //return event.getNewMetadata();
   }
   
-  public static XTraceMetadata rpcError() {
+  public static void rpcError() {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
-    event.addEdge(getThreadContext());
+    //event.addEdge(getThreadContext());
     try {
 	    if (hostname == null) {
         hostname = InetAddress.getLocalHost().getHostName();
@@ -502,15 +459,15 @@ public class XTraceContext {
     event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "ERROR");
     event.sendReport();
-    setThreadContext(event.getNewMetadata());
-    return event.getNewMetadata();
+    //setThreadContext(event.getNewMetadata());
+    //return event.getNewMetadata();
   }
   
-  public static XTraceMetadata rpcException() {
+  public static void rpcException() {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
-    event.addEdge(getThreadContext());
+    //event.addEdge(getThreadContext());
     try {
 	    if (hostname == null) {
         hostname = InetAddress.getLocalHost().getHostName();
@@ -522,222 +479,197 @@ public class XTraceContext {
     event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "FATAL");
     event.sendReport();
-    setThreadContext(event.getNewMetadata());
-    return event.getNewMetadata();
+    //setThreadContext(event.getNewMetadata());
+    //return event.getNewMetadata();
   }
 
   /* Cache */
-  public static XTraceMetadata cacheSearch(String agent, String cacheType) {
+  public static void cacheSearch(String agent, String cacheType) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + cacheType.toUpperCase() + "_CACHE_LOOKUP");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
   
-  public static XTraceMetadata cacheHit(String agent, String cacheType) {
+  public static void cacheHit(String agent, String cacheType) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + cacheType.toUpperCase() + "_CACHE_HIT");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
   
-  public static XTraceMetadata cacheMiss(String agent, String cacheType) {
+  public static void cacheMiss(String agent, String cacheType) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + cacheType.toUpperCase() + "_CACHE_MISS");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
   /* Data Transfer */
-  public static XTraceMetadata sendPacket(String agent, long seqno, XTraceMetadata previousSend) {
+  public static void sendPacket(String agent, long seqno, XTraceMetadata previousSend) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET");
-    if (previousSend != null)
-      event.addEdge(previousSend);
+    //if (previousSend != null)
+      //event.addEdge(previousSend);
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata acceptPacket(String agent, long seqno, XTraceMetadata previousAccept) {
+  public static void acceptPacket(String agent, long seqno, XTraceMetadata previousAccept) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_PACKET");
-    if (previousAccept != null)
-      event.addEdge(previousAccept);
+    //if (previousAccept != null)
+      //event.addEdge(previousAccept);
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata receivePacket(String agent, long seqno) {
+  public static void receivePacket(String agent, long seqno) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_PACKET");
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata sendAck(String agent, long seqno, XTraceMetadata previousAck) {
+  public static void sendAck(String agent, long seqno, XTraceMetadata previousAck) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK");
-    if (previousAck != null)
-      event.addEdge(previousAck);
+    //if (previousAck != null)
+      //event.addEdge(previousAck);
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata acceptAck(String agent, long seqno, XTraceMetadata previousAccept) {
+  public static void acceptAck(String agent, long seqno, XTraceMetadata previousAccept) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK");
-    if (previousAccept != null)
-      event.addEdge(previousAccept);
+    //if (previousAccept != null)
+      //event.addEdge(previousAccept);
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata receiveAck(String agent, long seqno) {
+  public static void receiveAck(String agent, long seqno) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_ACK");
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
   /* Data Transfer Ops */
-  public static XTraceMetadata opReadBlockRequest(String agent) {
+  public static void opReadBlockRequest(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_REQUEST");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opReadBlockReceive(String agent) {
+  public static void opReadBlockReceive(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_RECEIVE");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opReadBlockReply(String agent) {
+  public static void opReadBlockReply(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_REPLY");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opReadBlockSuccess(String agent) {
+  public static void opReadBlockSuccess(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_SUCCESS");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opReadBlockFailure(String agent) {
+  public static void opReadBlockFailure(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_FAIL");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opWriteBlockRequest(String agent) {
+  public static void opWriteBlockRequest(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_REQUEST");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opWriteBlockReceive(String agent) {
+  public static void opWriteBlockReceive(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_RECEIVE");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opWriteBlockReply(String agent) {
+  public static void opWriteBlockReply(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_REPLY");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opWriteBlockSuccess(String agent) {
+  public static void opWriteBlockSuccess(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_SUCCESS");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata opWriteBlockFailure(String agent) {
+  public static void opWriteBlockFailure(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_FAIL");
     event.sendReport();
-    return event.getNewMetadata();
-  }
-
-  /* Read */
-  public static XTraceMetadata readChunkStart(String agent) {
-    return callStart(agent, "readChunk");
-  }
-  
-  public static XTraceMetadata readChunkEnd(String agent) {
-    return callEnd(agent, "readChunk");
-  }
-
-  public static XTraceMetadata readNextPacketStart(String agent) {
-    return callStart(agent, "readNextPacket");
-  }
-  
-  public static XTraceMetadata readNextPacketEnd(String agent) {
-    return callEnd(agent, "readNextPacket");
-  }
-  
-  public static XTraceMetadata readError(String agent) {
-    if (context.get()==null)
-      return null;
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_READ_ERROR");
-    event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
   /* Write */
-  public static XTraceMetadata newBlock(String agent) {
+  public static void newBlock(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     byte[] md = getThreadContext().pack();
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_NEW_BLOCK");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
-  public static XTraceMetadata appendBlock(String agent) {
+  public static void appendBlock(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     byte[] md = getThreadContext().pack();
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_APPEND_BLOCK");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
-  public static XTraceMetadata endBlock(String agent) {
+  public static void endBlock(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_END_BLOCK");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
   
-  public static XTraceMetadata writeError(String agent) {
+  public static void writeError(String agent) {
     if (context.get()==null)
-      return null;
+      return;// null;
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_WRITE_ERROR");
     event.sendReport();
-    return event.getNewMetadata();
+    //return event.getNewMetadata();
   }
 
   /* Misc */
