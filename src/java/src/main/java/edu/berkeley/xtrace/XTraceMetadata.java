@@ -33,6 +33,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Random;
 
 import org.apache.log4j.Logger;
 
@@ -59,6 +63,28 @@ public final class XTraceMetadata {
 	private int numOptions;
 
   public XTraceMetadata previous;
+	
+  private static ThreadLocal<Random> random
+		= new ThreadLocal<Random>() {
+		@Override
+		protected Random initialValue() {
+			int processId = ManagementFactory.getRuntimeMXBean().getName().hashCode();
+			try {
+				return new Random(++threadId
+						+ processId
+						+ System.nanoTime()
+						+ Thread.currentThread().getId()
+						+ InetAddress.getLocalHost().getHostName().hashCode() );
+			} catch (UnknownHostException e) {
+				// Failed to get local host name; just use the other pieces
+				return new Random(++threadId
+						+ processId
+						+ System.nanoTime()
+						+ Thread.currentThread().getId());
+			}
+		}
+	};
+	private static volatile long threadId = 0;
 	
 	/**
 	 * The default constructor produces an invalid XTraceMetadata object
@@ -663,4 +689,11 @@ public final class XTraceMetadata {
 			new XTraceMetadata().write(out);
 		}
 	}
+
+  public XTraceMetadata newOpId() {
+    XTraceMetadata newmd = new XTraceMetadata(this);
+    newmd.setOpId(random.get().nextLong());
+    newmd.previous = this;
+    return newmd;
+  }
 }
