@@ -56,7 +56,9 @@ public final class XTraceMetadata {
 	private final TaskID taskid;
 	private byte[] opId;
 	private OptionField[] options;
-	private int numOptions; 
+	private int numOptions;
+
+  public XTraceMetadata previous;
 	
 	/**
 	 * The default constructor produces an invalid XTraceMetadata object
@@ -66,6 +68,7 @@ public final class XTraceMetadata {
 		opId = new byte[] {0x00, 0x00, 0x00, 0x00};
 		options = null;
 		numOptions = 0;
+    previous = null;
 	}
 	
 	/**
@@ -91,6 +94,7 @@ public final class XTraceMetadata {
 		}
 		options = null;
 		numOptions = 0;
+    previous = null;
 	}
 
 	/**
@@ -112,6 +116,7 @@ public final class XTraceMetadata {
 		}
 		options = null;
 		numOptions = 0;
+    previous = null;
 	}
 	
 	/**
@@ -133,6 +138,7 @@ public final class XTraceMetadata {
 		}
 		options = null;
 		numOptions = 0;
+    previous = null;
 	}
 	
 	/**
@@ -154,6 +160,7 @@ public final class XTraceMetadata {
 		for (int i = 0; i < xtr.numOptions; i++) {
 			this.options[i] = xtr.options[i];
 		}
+    this.previous = xtr.previous;
 	}
 
 	/**
@@ -265,6 +272,7 @@ public final class XTraceMetadata {
 			totOptLen -= (2 + len);
 			optPtr += (2 + len);
 		}
+    md.previous = null;
 		return md;
 	}
 

@@ -180,6 +180,10 @@ public class XTraceContext {
 		}
 		event.sendReport();
 	}
+
+  public static XTraceEvent createEvent(String agent, String label) {
+    return createEvent(agent, label, true);
+  }
 	
 	/**
 	 * Creates a new event context, adds an edge from the current thread's
@@ -191,7 +195,7 @@ public class XTraceContext {
 	 * @param agent name of current agent
 	 * @param label description of the task
 	 */
-	public static XTraceEvent createEvent(String agent, String label) {
+	public static XTraceEvent createEvent(String agent, String label, boolean newMethod) {
 		if (context.get()==null) {
 			return null;
 		}
@@ -203,8 +207,15 @@ public class XTraceContext {
 			opIdLength = oldContext.getOpIdLength();
 		}
 		XTraceEvent event = new XTraceEvent(opIdLength);
-		
-		//event.addEdge(oldContext);
+    if (newMethod) {
+	    event.setMetadata(oldContext);
+      if (oldContext.previous != null) {
+        event.put("Edge", oldContext.previous.getOpIdString());
+        oldContext.previous = null;
+      }
+    } else {
+      event.addEdge(oldContext);
+    }
 
 		try {
 			if (hostname == null) {
@@ -218,7 +229,8 @@ public class XTraceContext {
 		event.put("Agent", agent);
 		event.put("Label", hostname.toUpperCase() + "_" + label);
 
-		//setThreadContext(event.getNewMetadata());
+		if (!newMethod)
+      setThreadContext(event.getNewMetadata());
 		return event;
 	}
 
@@ -353,7 +365,7 @@ public class XTraceContext {
 	public static void startTrace(String agent, String title, String... tags) {
     //TODO: change
 		TaskID taskId = new TaskID(8);
-		setThreadContext(new XTraceMetadata(taskId, 0L));
+		setThreadContext(new XTraceMetadata(taskId, random.get().nextLong()));
 		XTraceEvent event = createEvent(agent, "Start Trace: " + title);
 		event.put("Title", title);
 		for (String tag: tags) {
@@ -372,7 +384,7 @@ public class XTraceContext {
     if (random.get().nextInt(100) < sampleRate) {
       TaskID taskId = new TaskID(8);
       //TODO: change
-      setThreadContext(new XTraceMetadata(taskId, 0L));
+      setThreadContext(new XTraceMetadata(taskId, random.get().nextLong()));
       refs.set(1);
     }
     else {
@@ -427,7 +439,13 @@ public class XTraceContext {
     if (context.get()==null)
       return;// null;
     XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
-    //event.addEdge(getThreadContext());
+    
+    event.setMetadata(getThreadContext());
+    if (getThreadContext().previous != null) {
+      event.put("Edge", getThreadContext().previous.getOpIdString());
+      getThreadContext().previous = null;
+    }
+    
     try {
 	    if (hostname == null) {
         hostname = InetAddress.getLocalHost().getHostName();
@@ -448,6 +466,11 @@ public class XTraceContext {
       return;// null;
     XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
     //event.addEdge(getThreadContext());
+    event.setMetadata(getThreadContext());
+    if (getThreadContext().previous != null) {
+      event.put("Edge", getThreadContext().previous.getOpIdString());
+      getThreadContext().previous = null;
+    }
     try {
 	    if (hostname == null) {
         hostname = InetAddress.getLocalHost().getHostName();
@@ -468,6 +491,11 @@ public class XTraceContext {
       return;// null;
     XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
     //event.addEdge(getThreadContext());
+    event.setMetadata(getThreadContext());
+    if (getThreadContext().previous != null) {
+      event.put("Edge", getThreadContext().previous.getOpIdString());
+      getThreadContext().previous = null;
+    }
     try {
 	    if (hostname == null) {
         hostname = InetAddress.getLocalHost().getHostName();
@@ -509,25 +537,19 @@ public class XTraceContext {
   }
 
   /* Data Transfer */
-  public static void sendPacket(String agent, long seqno, XTraceMetadata previousSend) {
+  public static XTraceMetadata sendPacket(String agent, long seqno, XTraceMetadata previousSend) {
     if (context.get()==null)
-      return;// null;
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET");
-    //if (previousSend != null)
-      //event.addEdge(previousSend);
+      return null;
+    XTraceEvent event;
+    if (previousSend == null)
+      event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET");
+    else {
+      event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET", false);
+      event.addEdge(previousSend);
+    }
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    //return event.getNewMetadata();
-  }
-  public static void acceptPacket(String agent, long seqno, XTraceMetadata previousAccept) {
-    if (context.get()==null)
-      return;// null;
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_PACKET");
-    //if (previousAccept != null)
-      //event.addEdge(previousAccept);
-    event.put("Seqno", String.valueOf(seqno));
-    event.sendReport();
-    //return event.getNewMetadata();
+    return event.getNewMetadata();
   }
   public static void receivePacket(String agent, long seqno) {
     if (context.get()==null)
@@ -537,25 +559,33 @@ public class XTraceContext {
     event.sendReport();
     //return event.getNewMetadata();
   }
-  public static void sendAck(String agent, long seqno, XTraceMetadata previousAck) {
+  public static XTraceMetadata sendAck(String agent, long seqno, XTraceMetadata previousAck) {
     if (context.get()==null)
-      return;// null;
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK");
-    //if (previousAck != null)
-      //event.addEdge(previousAck);
+      return null;
+    XTraceEvent event;
+    if (previousAck == null)
+      event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK");
+    else {
+      event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK", false);
+      event.addEdge(previousAck);
+    }
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    //return event.getNewMetadata();
+    return event.getNewMetadata();
   }
-  public static void acceptAck(String agent, long seqno, XTraceMetadata previousAccept) {
+  public static XTraceMetadata acceptAck(String agent, long seqno, XTraceMetadata previousAccept) {
     if (context.get()==null)
-      return;// null;
-    XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK");
-    //if (previousAccept != null)
-      //event.addEdge(previousAccept);
+      return null;
+    XTraceEvent event;
+    if (previousAccept == null)
+      event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK");
+    else {
+      event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK", false);
+      event.addEdge(previousAccept);
+    }
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
-    //return event.getNewMetadata();
+    return event.getNewMetadata();
   }
   public static void receiveAck(String agent, long seqno) {
     if (context.get()==null)
@@ -642,7 +672,6 @@ public class XTraceContext {
   public static void newBlock(String agent) {
     if (context.get()==null)
       return;// null;
-    byte[] md = getThreadContext().pack();
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_NEW_BLOCK");
     event.sendReport();
     //return event.getNewMetadata();
@@ -650,7 +679,6 @@ public class XTraceContext {
   public static void appendBlock(String agent) {
     if (context.get()==null)
       return;// null;
-    byte[] md = getThreadContext().pack();
     XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_APPEND_BLOCK");
     event.sendReport();
     //return event.getNewMetadata();
@@ -754,9 +782,10 @@ public class XTraceContext {
 		return oldContext;
 	}
 
-  public static void delay() {
-    long start = System.nanoTime();
-    while(System.nanoTime() - start < delayAmount)
-      ;
+  public static void newOpId() {
+    XTraceMetadata metadata = new XTraceMetadata(getThreadContext().getTaskId(), random.get().nextLong());
+    metadata.previous = getThreadContext();
+    setThreadContext(metadata);
   }
+
 }
