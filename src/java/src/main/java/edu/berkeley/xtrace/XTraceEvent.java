@@ -146,9 +146,9 @@ public class XTraceEvent {
 	 * Add a timestamp property with the current time.
 	 */
 	private void setTimestamp() {
-		long time = System.currentTimeMillis();
-		String value = String.format("%d.%03d", time/1000, time%1000);
-		report.put("Timestamp", value, false);
+		long time = System.nanoTime();
+		//String value = String.format("%d.%03d", time/1000, time%1000);
+		report.put("Timestamp", String.valueOf(time), false);
 	}
 	
 	/**
