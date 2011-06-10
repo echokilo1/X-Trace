@@ -19,6 +19,6 @@ else
   DATA_DIR=$BASE/data
 fi
 
-CLASSPATH=$BASE/build/jar/xtrace-2.0.jar:$BASE/lib/
+CLASSPATH=$BASE/lib/*:$BASE/target/xtrace-2.0.jar:
 
 java -Dlog4j.configuration=log4j-server.properties -Dxtrace.backend.webui.dir=$BASE/webui -cp $CLASSPATH edu.berkeley.xtrace.server.XTraceServer $DATA_DIR

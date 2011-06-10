@@ -432,7 +432,32 @@ public class XTraceContext {
   /* RPC */
 
   public static XTraceMetadata[] rpcStart(int numCalls) {
-    return fork(numCalls, "RPC_CALL");
+    if (numCalls > 1)
+      return fork(numCalls, "RPC_CALL");
+    if (context.get()==null)
+      return new XTraceMetadata[] {null};// null;
+    XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+    
+    event.setMetadata(getThreadContext());
+    if (getThreadContext().previous != null) {
+      event.put("Edge", getThreadContext().previous.getOpIdString());
+      getThreadContext().previous = null;
+    }
+    
+    try {
+	    if (hostname == null) {
+        hostname = InetAddress.getLocalHost().getHostName();
+		  }
+	  } catch (UnknownHostException e) {
+      hostname = "unknown";
+	  }
+    event.put("Host", hostname);
+    event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
+    event.put("Status", "SUCCESS");
+    event.sendReport();
+    return new XTraceMetadata[] {getThreadContext()};
+    //setThreadContext(event.getNewMetadata());
+    //return event.getNewMetadata();
   }
 
   public static void rpcSuccess() {
