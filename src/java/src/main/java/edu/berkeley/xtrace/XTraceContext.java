@@ -70,6 +70,14 @@ public class XTraceContext {
 			return null;
 		}
 	};
+	
+  private static ThreadLocal<String> jobId
+		= new ThreadLocal<String>() {
+		@Override
+		protected String initialValue() {
+			return null;
+		}
+	};
 
   private static ThreadLocal<Integer> refs
     = new ThreadLocal<Integer>() {
@@ -122,6 +130,14 @@ public class XTraceContext {
 			context.set(null);
 		}
 	}
+
+  public synchronized static void setJobId(String id) {
+    jobId.set(id);
+  }
+
+  public synchronized static String getJobId() {
+    return jobId.get();
+  }
 	
 	/**
 	 * Get the current thread's X-Trace context, that is, the metadata for the
