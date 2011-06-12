@@ -71,7 +71,7 @@ public class XTraceContext {
 		}
 	};
 	
-  private static ThreadLocal<String> jobId
+  private static ThreadLocal<String> tId
 		= new ThreadLocal<String>() {
 		@Override
 		protected String initialValue() {
@@ -131,12 +131,18 @@ public class XTraceContext {
 		}
 	}
 
-  public synchronized static void setJobId(String id) {
-    jobId.set(id);
+  public synchronized static void settId(String id) {
+    tId.set(id);
   }
 
-  public synchronized static String getJobId() {
-    return jobId.get();
+  public synchronized static String gettId() {
+    return tId.get();
+  }
+
+  public synchronized static String switchtId(String id) {
+    String old = tId.get();
+    tId.set(id);
+    return old;
   }
 	
 	/**
@@ -244,6 +250,8 @@ public class XTraceContext {
 		event.put("Host", hostname);
 		event.put("Agent", agent);
 		event.put("Label", hostname.toUpperCase() + "_" + label);
+    if (tId.get() != null)
+      event.put("TaskID", tId.get());
 
 		if (!newMethod)
       setThreadContext(event.getNewMetadata());
@@ -470,6 +478,8 @@ public class XTraceContext {
     event.put("Host", hostname);
     event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "SUCCESS");
+    if (tId.get() != null)
+      event.put("TaskID", tId.get());
     event.sendReport();
     return new XTraceMetadata[] {getThreadContext()};
     //setThreadContext(event.getNewMetadata());
@@ -497,6 +507,8 @@ public class XTraceContext {
     event.put("Host", hostname);
     event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "SUCCESS");
+    if (tId.get() != null)
+      event.put("TaskID", tId.get());
     event.sendReport();
     //setThreadContext(event.getNewMetadata());
     //return event.getNewMetadata();
@@ -522,6 +534,8 @@ public class XTraceContext {
     event.put("Host", hostname);
     event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "ERROR");
+    if (tId.get() != null)
+      event.put("TaskID", tId.get());
     event.sendReport();
     //setThreadContext(event.getNewMetadata());
     //return event.getNewMetadata();
@@ -547,6 +561,8 @@ public class XTraceContext {
     event.put("Host", hostname);
     event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
     event.put("Status", "FATAL");
+    if (tId.get() != null)
+      event.put("TaskID", tId.get());
     event.sendReport();
     //setThreadContext(event.getNewMetadata());
     //return event.getNewMetadata();
@@ -763,6 +779,8 @@ public class XTraceContext {
       event.addEdge(getThreadContext());
       event.put("Label", hostname.toUpperCase() + "_" + label);
       event.put("Host", hostname);
+      if (tId.get() != null)
+        event.put("TaskID", tId.get());
       event.sendReport();
       metadata[i] = event.getNewMetadata();
     }
@@ -786,6 +804,8 @@ public class XTraceContext {
 	  }
     event.put("Host", hostname);
     event.put("Label", hostname.toUpperCase() + "_" + label);
+    if (tId.get() != null)
+      event.put("TaskID", tId.get());
     for (int i = 0; i < metadata.length; i++)
       if (metadata[i] != null && metadata[i].isValid())
         event.addEdge(metadata[i]);
