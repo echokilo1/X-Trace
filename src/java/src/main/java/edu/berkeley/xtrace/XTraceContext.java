@@ -399,6 +399,11 @@ public class XTraceContext {
 	}
 
   /* Request level sampling */
+
+  public static void newTrace(String taskId) {
+    tId.set(taskId);
+    newTrace();
+  }
   
   public static void newTrace() {
     if (context.get() != null && refs.get() > 0) {
@@ -476,7 +481,7 @@ public class XTraceContext {
       hostname = "unknown";
 	  }
     event.put("Host", hostname);
-    event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
+    event.put("Label", hostname.toUpperCase() + "_RPC_CALL");
     event.put("Status", "SUCCESS");
     if (tId.get() != null)
       event.put("TaskID", tId.get());
