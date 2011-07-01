@@ -106,6 +106,10 @@ public class XTraceEvent {
 	public void put(String key, String value) {
 		report.put(key, value);
 	}
+
+  public void put(String key, String value, boolean append) {
+    report.put(key, value, append);
+  }
 	
 	public XTraceMetadata getNewMetadata() {
 		XTraceMetadata xtr = report.getMetadata();

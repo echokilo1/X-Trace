@@ -606,8 +606,10 @@ public class XTraceContext {
     if (previousSend == null)
       event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET");
     else {
+      XTraceMetadata m = getThreadContext();
       event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET", false);
-      event.addEdge(previousSend);
+      if (!m.equals(getThreadContext()))
+        event.addEdge(previousSend);
     }
     event.put("Seqno", String.valueOf(seqno));
     event.sendReport();
