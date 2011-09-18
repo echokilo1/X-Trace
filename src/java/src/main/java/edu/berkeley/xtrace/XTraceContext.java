@@ -108,9 +108,10 @@ public class XTraceContext {
     }
   };
 
-  private final static long sampleRate = 10;
-  private final static long delayAmount = 0;
-  private static volatile long threadId = 0;
+    /* @todo: This parameter should be specified as a command line option */
+    private final static long sampleRate = 10;
+    private final static long delayAmount = 0;
+    private static volatile long threadId = 0;
 
 	/** Cached hostname of the current machine. **/
 	private static String hostname = null;
