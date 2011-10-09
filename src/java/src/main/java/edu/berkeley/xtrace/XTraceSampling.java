@@ -17,48 +17,48 @@ import java.util.Random;
  * @author Raja Sambasivan
  */
 public class XTraceSampling {
+
     /** Sample 10% of all incoming tasks (requests) by default */
     private static int samplingPercentage = 10;
-
     /** A counter of threads that have accessed this class */
     private static volatile long threadId = 0;
-
     /** 
      * Instantiate a new random number generator with an unique sead for use by
      * all events that happen in this thread.  
      */
-    private static ThreadLocal<Random> random
-        = new ThreadLocal<Random>() {
+    private static ThreadLocal<Random> random = new ThreadLocal<Random>() {
+
         @Override
         protected Random initialValue() {
-			int processId = ManagementFactory.getRuntimeMXBean().getName().hashCode();
-			try {
-				return new Random(++threadId
-                                  + processId
-                                  + System.nanoTime()
-                                  + Thread.currentThread().getId()
-                                  + InetAddress.getLocalHost().getHostName().hashCode() );
-			} catch (UnknownHostException e) {
-				// Failed to get local host name; just use the other pieces
-				return new Random(++threadId
-                                  + processId
-                                  + System.nanoTime()
-                                  + Thread.currentThread().getId());
-			}
+            int processId = ManagementFactory.getRuntimeMXBean().getName().hashCode();
+            try {
+                return new Random(++threadId
+                        + processId
+                        + System.nanoTime()
+                        + Thread.currentThread().getId()
+                        + InetAddress.getLocalHost().getHostName().hashCode());
+            } catch (UnknownHostException e) {
+                // Failed to get local host name; just use the other pieces
+                return new Random(++threadId
+                        + processId
+                        + System.nanoTime()
+                        + Thread.currentThread().getId());
+            }
         }
     };
 
     /**
      * Constructor
      */
-    public XTraceSampling() {}
+    public XTraceSampling() {
+    }
 
     /**
      * Set the sampling percentage
      * @param percentage: The sampling percentage
      */
     public static void setSamplingPercentage(int percentage) {
-        assert(percentage >= 0 && percentage <= 100);
+        assert (percentage >= 0 && percentage <= 100);
         samplingPercentage = percentage;
     }
 
@@ -84,6 +84,5 @@ public class XTraceSampling {
      */
     public static long getRandomLong() {
         return random.get().nextLong();
-    }        
+    }
 }
-

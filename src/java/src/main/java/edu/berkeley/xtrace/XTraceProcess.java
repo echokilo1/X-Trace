@@ -15,13 +15,14 @@ import java.io.StringWriter;
  * @author Matei Zaharia
  */
 public class XTraceProcess {
-	final XTraceMetadata startCtx;
-	final String agent;
-	final String name;
 
-	XTraceProcess(XTraceMetadata startCtx, String agent, String name) {
-		this.startCtx = startCtx;
-		this.agent = agent;
-		this.name = name;
-	}
+    final XTraceMetadata startCtx;
+    final String agent;
+    final String name;
+
+    XTraceProcess(XTraceMetadata startCtx, String agent, String name) {
+        this.startCtx = startCtx;
+        this.agent = agent;
+        this.name = name;
+    }
 }
