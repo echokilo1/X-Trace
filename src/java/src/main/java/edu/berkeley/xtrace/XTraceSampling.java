@@ -57,7 +57,7 @@ public class XTraceSampling {
      * Set the sampling percentage
      * @param percentage: The sampling percentage
      */
-    public static void setSamplingPercentage(int percentage) {
+    public static synchronized void setSamplingPercentage(int percentage) {
         assert (percentage >= 0 && percentage <= 100);
         samplingPercentage = percentage;
     }
@@ -75,6 +75,7 @@ public class XTraceSampling {
      * @return true if event should be sampled, false otherwise
      */
     public static boolean shouldSample() {
+        /** random.get().nextInt(x) returns [0, x) */
         return random.get().nextInt(101) <= samplingPercentage;
     }
 
