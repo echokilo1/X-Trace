@@ -26,6 +26,7 @@ public class SamplingPercentageServer implements Runnable {
 
     public void StartServer() {
         Thread t = new Thread(this, "SamplingServer");
+        t.setDaemon(true);
         t.start();
     }
 
