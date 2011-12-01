@@ -36,7 +36,8 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-//import org.apache.log4j.Logger;
+//import org.apache.commons.logging.Log;
+//import org.apache.commons.logging.LogFactory;
 
 /**
  * X-trace reporting context framework that uses UDP packets sent to
@@ -55,7 +56,7 @@ import java.net.UnknownHostException;
  */
 public final class UdpReporter extends Reporter
 {
-	//private static final Logger LOG = Logger.getLogger(UdpReporter.class);
+	//private static final Log LOG = Logger.getLog(UdpReporter.class);
 
 	/* Local report daemon state */
 	public DatagramSocket localSock;

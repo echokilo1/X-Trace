@@ -1,28 +1,26 @@
-package edu.berkeley.xtrace.server.sampling;
+package edu.berkeley.xtrace.samplingserver;
 
 import edu.berkeley.xtrace.XTraceSampling;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.channels.IllegalBlockingModeException;
-import org.apache.log4j.Logger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 /**
  *
  * @author Raja Sambasivan
  */
 public class SamplingPercentageServer implements Runnable {
 
-    Logger logger = null;
+    private static final Log logger =
+            LogFactory.getLog(SamplingPercentageServer.class);
+    
     /**
      * Constructor
      */
-    public SamplingPercentageServer() {
-         logger = Logger.getLogger(
-            "edu.berkeley.xtrace.server.sampling.SamplingPercentageServer");
-    }
+    public SamplingPercentageServer() {}
 
     public void StartServer() {
         Thread t = new Thread(this, "SamplingServer");

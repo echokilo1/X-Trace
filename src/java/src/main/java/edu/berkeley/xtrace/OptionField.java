@@ -29,7 +29,8 @@ package edu.berkeley.xtrace;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * An X-trace option field.  Options are designed to support extensions
@@ -42,7 +43,7 @@ public class OptionField {
 
     public static final byte NOP = 0;
     public static final byte SEVERITY = (byte) 0xCE;
-    private static final Logger LOG = Logger.getLogger(OptionField.class);
+    private static final Log LOG = LogFactory.getLog(OptionField.class);
     private final byte type;
     private final byte[] payload;
 

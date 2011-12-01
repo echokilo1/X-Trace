@@ -32,11 +32,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
-
 import edu.berkeley.xtrace.XTraceMetadata;
 import edu.berkeley.xtrace.TaskID;
+
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
 
 /**
  * This tool can be used to send reports from the command line directly to
@@ -61,9 +61,9 @@ public final class SendReportTool {
 	private static Random r;
 
 	public static void main(String[] args) {
-		BasicConfigurator.configure();
 		r = new Random();
-		
+		BasicConfigurator.configure();
+                
 		out("X-Trace command line reporter");
 		
 		if (args.length == 0 || args[0].equalsIgnoreCase("--help")) {

@@ -27,7 +27,8 @@
 
 package edu.berkeley.xtrace.reporting;
 
-//import org.apache.log4j.Logger;
+//import org.apache.commons.logging.Log;
+//import org.apache.commons.logging.LogFactory;
 
 /**
  * X-trace reporting context framework.  This context is the abstract
@@ -44,7 +45,7 @@ package edu.berkeley.xtrace.reporting;
  */
 public abstract class Reporter
 {
-	//private static final Logger LOG = Logger.getLogger(Reporter.class);
+	//private static final Log LOG = LogFactory.getLogger(Reporter.class);
 
 	static Reporter reporter;
 

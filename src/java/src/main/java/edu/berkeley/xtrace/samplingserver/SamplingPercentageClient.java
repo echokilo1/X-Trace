@@ -1,9 +1,11 @@
-package edu.berkeley.xtrace.server.sampling;
+package edu.berkeley.xtrace.samplingserver;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+
+import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
 /**
@@ -12,15 +14,13 @@ import org.apache.log4j.Logger;
  */
 public class SamplingPercentageClient {
     
-    private Logger logger = null;
+    private static final Logger logger = 
+            Logger.getLogger(SamplingPercentageClient.class);
 
     /**
      * Default constructor
      */
-    public SamplingPercentageClient() {
-         logger = Logger.getLogger(
-            "edu.berkeley.xtrace.server.sampling.SamplingPercentageClient");
-    }
+    public SamplingPercentageClient() {}
 
     /**
      * Sends the sampling percentage specified to the XTraceSamplingServer
@@ -41,7 +41,7 @@ public class SamplingPercentageClient {
             logger.error("Unknown host: " + server  + ".  "  + e);
         } catch (IOException e) {
             logger.error("Couldn't write data to socket."  
-                    + server + ".  " + port  + ".  " + e);
+                    + server + ".  port: " + port  + ".  " + e);
         }
     }
 
@@ -53,8 +53,10 @@ public class SamplingPercentageClient {
      */
     public static void main(String[] args) {
         int value = 0;
-        assert(args.length == 2);
+        assert(args.length == 2);        
         String host = args[0];
+        
+        BasicConfigurator.configure();
 
         try {
             value = Integer.parseInt(args[1]);            

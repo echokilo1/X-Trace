@@ -1,4 +1,4 @@
-package edu.berkeley.xtrace.server.sampling;
+package edu.berkeley.xtrace.samplingserver;
 
 /**
  *

@@ -30,14 +30,16 @@ import java.io.IOException;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-//import org.apache.log4j.Logger;
+//import org.apache.commons.logging.Log;
+//import org.apache.commons.logging.LogFactory;
+
 /**
  * X-trace input/output utilities.
  *
  * @author George Porter
  */
 public final class IoUtil {
-    //private static final Logger LOG = Logger.getLogger(IoUtil.class);
+    //private static final Log LOG = LogFactory.getLog(IoUtil.class);
 
     private static final char[] hex = "0123456789ABCDEF".toCharArray();
 

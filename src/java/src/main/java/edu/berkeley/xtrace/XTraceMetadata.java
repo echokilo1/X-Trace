@@ -37,7 +37,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Random;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 
 /**
  * A tracing context, containing the X-Trace metadata that is propagated along
@@ -51,8 +53,8 @@ import org.apache.log4j.Logger;
  * @author George Porter
  */
 public final class XTraceMetadata {
-    //private static final Logger LOG = Logger.getLogger(XTraceMetadata.class);
-
+    public static final Log LOG = LogFactory.getLog(XTraceMetadata.class);
+    
     private static final byte[] INVALID_ID = {0x00, 0x00, 0x00, 0x00};
     private static final byte MetadataVersion = 1;
     private final TaskID taskid;

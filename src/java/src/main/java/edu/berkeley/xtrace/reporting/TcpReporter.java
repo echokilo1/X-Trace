@@ -32,7 +32,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 
 /**
  * X-trace reporting context framework.  This context sends reports to a
@@ -46,7 +48,7 @@ import org.apache.log4j.Logger;
  */
 public final class TcpReporter extends Reporter
 {
-	private static final Logger LOG = Logger.getLogger(TcpReporter.class);
+	private static final Log LOG = LogFactory.getLog(TcpReporter.class);
 	
 	// Connection to server or frontend daemon.
 	private Socket socket;
