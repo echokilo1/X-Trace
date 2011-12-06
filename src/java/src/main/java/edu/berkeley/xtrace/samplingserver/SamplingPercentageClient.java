@@ -67,6 +67,6 @@ public class SamplingPercentageClient {
         assert (value >= 0 && value <= 100);
         SamplingPercentageClient client 
                 = new SamplingPercentageClient();
-        client.sendData(host, value, Constants.port);
+        client.sendData(host, Constants.port, value);
     }
 }
