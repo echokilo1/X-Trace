@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.AbstractMap;
 
 /**
  * High-level API for maintaining a per-thread X-Trace context (task and
@@ -85,6 +86,7 @@ public class XTraceContext {
     /** Cached hostname of the current machine. **/
     private static String hostname = null;
     static int defaultOpIdLength = 8;
+    private final static String delim = ".";
 
     /**
      * Set the X-Trace context for the current thread, to link it causally to
@@ -217,7 +219,7 @@ public class XTraceContext {
 
         event.put("Host", hostname);
         event.put("Agent", agent);
-        event.put("Label", hostname.toUpperCase() + "_" + label);
+        event.put("Label", hostname.toUpperCase() + delim + label);
         if (tId.get() != null) {
             event.put("TaskID", tId.get());
         }
@@ -405,7 +407,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + name.toUpperCase() + "_START");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + name.toUpperCase() + delim + "START");
         event.sendReport();
         //System.out.println("callStart end");
         //return event.getNewMetadata();
@@ -415,7 +417,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + name.toUpperCase() + "_END");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + name.toUpperCase() + delim + "END");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -424,8 +426,279 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + name.toUpperCase() + "_ERROR");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + name.toUpperCase() + delim + "ERROR");
         event.sendReport();
+        //return event.getNewMetadata();
+    }
+
+    /* ekrevat RPC methods */ 
+    /* TODO: instead of AbstractMap.SimpleEntry, write a class that represents specific extra 
+       fields and their values that can be added to XTrace reports as appropriate */
+        
+    public static XTraceMetadata[] rpcSendRequest(int numCalls, String agent, String name, AbstractMap.SimpleEntry<String,String>... fields) {
+        if (numCalls > 1) {
+            return fork(numCalls, "RPC_CALL");
+        }
+        if (context.get() == null) {
+            return new XTraceMetadata[]{null};// null;
+        }
+        XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+
+        event.setMetadata(getThreadContext());
+        if (getThreadContext().previous != null) {
+            event.put("Edge", getThreadContext().previous.getOpIdString());
+            getThreadContext().previous = null;
+        }
+
+        try {
+            if (hostname == null) {
+                hostname = InetAddress.getLocalHost().getHostName();
+            }
+        } catch (UnknownHostException e) {
+            hostname = "unknown";
+        }
+        event.put("Host", hostname);
+        event.put("Agent", agent);
+        event.put("Label", agent.toUpperCase() + delim + name.toUpperCase() + delim + hostname.toUpperCase() + delim + "RPC_CALL");
+        //event.put("Label", hostname.toUpperCase() + delim + "RPC_CALL");
+        event.put("Status", "SUCCESS");
+        if (tId.get() != null) {
+            event.put("TaskID", tId.get());
+        }
+
+        /* Add any extra application-level fields -- TODO: Add CPU load and other value here automatically*/
+        for (AbstractMap.SimpleEntry<String,String> field : fields) {
+            event.put(field.getKey(), field.getValue());
+        }
+
+        event.sendReport();
+        return new XTraceMetadata[]{getThreadContext()};
+        //setThreadContext(event.getNewMetadata());
+        //return event.getNewMetadata();
+    }
+
+    /* When starting up an initial request, do not create a new OpId because one was just initialized */
+    public static void firstRequest(String agent, String name, AbstractMap.SimpleEntry<String,String>... fields) {
+        if (context.get() == null) {
+            return;// null;
+        }
+        
+        XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+
+        event.setMetadata(getThreadContext());
+        if (getThreadContext().previous != null) {
+            event.put("Edge", getThreadContext().previous.getOpIdString());
+            getThreadContext().previous = null;
+        }
+
+        try {
+            if (hostname == null) {
+                hostname = InetAddress.getLocalHost().getHostName();
+            }
+        } catch (UnknownHostException e) {
+            hostname = "unknown";
+        }
+
+        event.put("Host", hostname);
+        event.put("Agent", agent);
+        //next line used to be: agent.toUpperCase() + delim + name.toUpperCase() + delim + "START");E
+        event.put("Label", agent.toUpperCase() + delim + name.toUpperCase() + delim + hostname.toUpperCase() + delim + "ENTRY_START");
+        event.put("Status", "SUCCESS");
+        if (tId.get() != null) {
+            event.put("TaskID", tId.get());
+        }
+        for (AbstractMap.SimpleEntry<String,String> field : fields) {
+            event.put(field.getKey(), field.getValue());
+        }
+        event.sendReport();
+        //setThreadContext(event.getNewMetadata());
+        //return event.getNewMetadata();
+    }
+
+    /* When receive rpc or just starting up an initial request, we create a new OpId 
+       here to establish happens-before relationship */
+    public static void receiveRequest(String agent, String name, XTraceMetadata ctx, AbstractMap.SimpleEntry<String,String>... fields) {
+        if (ctx == null) {
+            return;// null;
+        }
+        
+        /* Create a new OpId and use the context passed in the rpc as the previous thread context */
+        XTraceContext.setThreadContext(ctx.newOpId());
+
+        XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+
+        event.setMetadata(getThreadContext());
+        if (getThreadContext().previous != null) {
+            event.put("Edge", getThreadContext().previous.getOpIdString());
+            getThreadContext().previous = null;
+        }
+
+        try {
+            if (hostname == null) {
+                hostname = InetAddress.getLocalHost().getHostName();
+            }
+        } catch (UnknownHostException e) {
+            hostname = "unknown";
+        }
+
+        event.put("Host", hostname);
+        event.put("Agent", agent);
+        //next line used to be: agent.toUpperCase() + delim + name.toUpperCase() + delim + "START");
+        event.put("Label", agent.toUpperCase() + delim + name.toUpperCase() + delim + hostname.toUpperCase() + delim + "START");
+        event.put("Status", "SUCCESS");
+        if (tId.get() != null) {
+            event.put("TaskID", tId.get());
+        }
+        for (AbstractMap.SimpleEntry<String,String> field : fields) {
+            event.put(field.getKey(), field.getValue());
+        }
+        event.sendReport();
+        //setThreadContext(event.getNewMetadata());
+        //return event.getNewMetadata();
+    }
+
+    public static void finishRequest(String agent, String name, AbstractMap.SimpleEntry<String,String>... fields) {
+        if (context.get() == null) {
+            return;// null;
+        }
+        
+        XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+
+        event.setMetadata(getThreadContext());
+        if (getThreadContext().previous != null) {
+            event.put("Edge", getThreadContext().previous.getOpIdString());
+            getThreadContext().previous = null;
+        }
+
+        try {
+            if (hostname == null) {
+                hostname = InetAddress.getLocalHost().getHostName();
+            }
+        } catch (UnknownHostException e) {
+            hostname = "unknown";
+        }
+
+        event.put("Host", hostname);
+        event.put("Agent", agent);
+        //next line used to be: agent.toUpperCase() + delim + name.toUpperCase() + delim + "START");
+        event.put("Label", agent.toUpperCase() + delim + name.toUpperCase() + delim + hostname.toUpperCase() + delim + "END");
+        event.put("Status", "SUCCESS");
+        if (tId.get() != null) {
+            event.put("TaskID", tId.get());
+        }
+        for (AbstractMap.SimpleEntry<String,String> field : fields) {
+            event.put(field.getKey(), field.getValue());
+        }
+        event.sendReport();
+        //setThreadContext(event.getNewMetadata());
+        //return event.getNewMetadata();
+    }
+
+    /* When receive rpc reply, we create a new OpId
+       here to establish happens-before relationship */
+    public static void rpcSuccessReply(String agent, String name, XTraceMetadata ctx, AbstractMap.SimpleEntry<String,String>... fields) {
+        if (ctx == null) {
+            return;// null;
+        }
+
+        /* Create a new OpId and use the context passed in the rpc as the previous thread context */
+        XTraceContext.setThreadContext(ctx.newOpId());
+
+        XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+
+        event.setMetadata(getThreadContext());
+        if (getThreadContext().previous != null) {
+            event.put("Edge", getThreadContext().previous.getOpIdString());
+            getThreadContext().previous = null;
+        }
+
+        try {
+            if (hostname == null) {
+                hostname = InetAddress.getLocalHost().getHostName();
+            }
+        } catch (UnknownHostException e) {
+            hostname = "unknown";
+        }
+        event.put("Host", hostname);
+        event.put("Agent", agent);
+        event.put("Label", agent.toUpperCase() + delim + name.toUpperCase() + delim + hostname.toUpperCase() + delim + "RPC_REPLY_SUCCESS");
+        event.put("Status", "SUCCESS");
+        if (tId.get() != null) {
+            event.put("TaskID", tId.get());
+        }
+        for (AbstractMap.SimpleEntry<String,String> field : fields) {
+            event.put(field.getKey(), field.getValue());
+        }
+        event.sendReport();
+        //setThreadContext(event.getNewMetadata());
+        //return event.getNewMetadata();
+    }
+
+   public static void rpcErrorReply(String agent, String name, XTraceMetadata ctx, AbstractMap.SimpleEntry<String,String>... fields) {
+        if (ctx == null) {
+            return;// null;
+        }
+        XTraceContext.setThreadContext(ctx.newOpId());
+        XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+        //event.addEdge(getThreadContext());
+        event.setMetadata(getThreadContext());
+        if (getThreadContext().previous != null) {
+            event.put("Edge", getThreadContext().previous.getOpIdString());
+            getThreadContext().previous = null;
+        }
+        try {
+            if (hostname == null) {
+                hostname = InetAddress.getLocalHost().getHostName();
+            }
+        } catch (UnknownHostException e) {
+            hostname = "unknown";
+        }
+        event.put("Host", hostname);
+        event.put("Agent", agent);
+        event.put("Label", agent.toUpperCase() + delim + name.toUpperCase() + delim + hostname.toUpperCase() + delim + "RPC_REPLY_ERROR");
+        event.put("Status", "ERROR");
+        if (tId.get() != null) {
+            event.put("TaskID", tId.get());
+        }
+        for (AbstractMap.SimpleEntry<String,String> field : fields) {
+            event.put(field.getKey(), field.getValue());
+        }
+        event.sendReport();
+        //setThreadContext(event.getNewMetadata());
+        //return event.getNewMetadata();
+    }
+
+    public static void rpcExceptionReply(String agent, String name, XTraceMetadata ctx, AbstractMap.SimpleEntry<String,String>... fields) {
+        if (ctx == null) {
+            return;// null;
+        }
+        XTraceContext.setThreadContext(ctx.newOpId());
+        XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
+        //event.addEdge(getThreadContext());
+        event.setMetadata(getThreadContext());
+        if (getThreadContext().previous != null) {
+            event.put("Edge", getThreadContext().previous.getOpIdString());
+            getThreadContext().previous = null;
+        }
+        try {
+            if (hostname == null) {
+                hostname = InetAddress.getLocalHost().getHostName();
+            }
+        } catch (UnknownHostException e) {
+            hostname = "unknown";
+        }
+        event.put("Host", hostname);
+        event.put("Agent", agent);
+        event.put("Label", agent.toUpperCase() + delim + name.toUpperCase() + delim + hostname.toUpperCase() + delim + "RPC_REPLY_EXCEPTION");
+        event.put("Status", "FATAL");
+        if (tId.get() != null) {
+            event.put("TaskID", tId.get());
+        }
+        for (AbstractMap.SimpleEntry<String,String> field : fields) {
+            event.put(field.getKey(), field.getValue());
+        }
+        event.sendReport();
+        //setThreadContext(event.getNewMetadata());
         //return event.getNewMetadata();
     }
 
@@ -453,7 +726,7 @@ public class XTraceContext {
             hostname = "unknown";
         }
         event.put("Host", hostname);
-        event.put("Label", hostname.toUpperCase() + "_RPC_CALL");
+        event.put("Label", hostname.toUpperCase() + delim + "RPC_CALL");
         event.put("Status", "SUCCESS");
         if (tId.get() != null) {
             event.put("TaskID", tId.get());
@@ -484,7 +757,7 @@ public class XTraceContext {
             hostname = "unknown";
         }
         event.put("Host", hostname);
-        event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
+        event.put("Label", hostname.toUpperCase() + delim + "RPC_REPLY");
         event.put("Status", "SUCCESS");
         if (tId.get() != null) {
             event.put("TaskID", tId.get());
@@ -513,7 +786,7 @@ public class XTraceContext {
             hostname = "unknown";
         }
         event.put("Host", hostname);
-        event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
+        event.put("Label", hostname.toUpperCase() + delim + "RPC_REPLY");
         event.put("Status", "ERROR");
         if (tId.get() != null) {
             event.put("TaskID", tId.get());
@@ -542,7 +815,7 @@ public class XTraceContext {
             hostname = "unknown";
         }
         event.put("Host", hostname);
-        event.put("Label", hostname.toUpperCase() + "_RPC_REPLY");
+        event.put("Label", hostname.toUpperCase() + delim + "RPC_REPLY");
         event.put("Status", "FATAL");
         if (tId.get() != null) {
             event.put("TaskID", tId.get());
@@ -557,7 +830,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + cacheType.toUpperCase() + "_CACHE_LOOKUP");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + cacheType.toUpperCase() + delim + "CACHE_LOOKUP");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -566,7 +839,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + cacheType.toUpperCase() + "_CACHE_HIT");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + cacheType.toUpperCase() + delim + "CACHE_HIT");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -575,7 +848,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_" + cacheType.toUpperCase() + "_CACHE_MISS");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + cacheType.toUpperCase() + delim + "CACHE_MISS");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -587,10 +860,10 @@ public class XTraceContext {
         }
         XTraceEvent event;
         if (previousSend == null) {
-            event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET");
+            event = createEvent(agent, agent.toUpperCase() + delim + "SEND_PACKET");
         } else {
             XTraceMetadata m = getThreadContext();
-            event = createEvent(agent, agent.toUpperCase() + "_SEND_PACKET", false);
+            event = createEvent(agent, agent.toUpperCase() + delim + "SEND_PACKET", false);
             if (!m.equals(previousSend)) {
                 event.addEdge(previousSend);
             }
@@ -604,7 +877,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_PACKET");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "RECEIVE_PACKET");
         event.put("Seqno", String.valueOf(seqno));
         event.sendReport();
         //return event.getNewMetadata();
@@ -616,9 +889,9 @@ public class XTraceContext {
         }
         XTraceEvent event;
         if (previousAck == null) {
-            event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK");
+            event = createEvent(agent, agent.toUpperCase() + delim + "SEND_ACK");
         } else {
-            event = createEvent(agent, agent.toUpperCase() + "_SEND_ACK", false);
+            event = createEvent(agent, agent.toUpperCase() + delim + "SEND_ACK", false);
             event.addEdge(previousAck);
         }
         event.put("Seqno", String.valueOf(seqno));
@@ -632,9 +905,9 @@ public class XTraceContext {
         }
         XTraceEvent event;
         if (previousAccept == null) {
-            event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK");
+            event = createEvent(agent, agent.toUpperCase() + delim + "ACCEPT_ACK");
         } else {
-            event = createEvent(agent, agent.toUpperCase() + "_ACCEPT_ACK", false);
+            event = createEvent(agent, agent.toUpperCase() + delim + "ACCEPT_ACK", false);
             event.addEdge(previousAccept);
         }
         event.put("Seqno", String.valueOf(seqno));
@@ -646,7 +919,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_RECEIVE_ACK");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "RECEIVE_ACK");
         event.put("Seqno", String.valueOf(seqno));
         event.sendReport();
         //return event.getNewMetadata();
@@ -657,7 +930,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_REQUEST");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_READ_BLOCK_REQUEST");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -666,7 +939,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_RECEIVE");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_READ_BLOCK_RECEIVE");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -675,7 +948,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_REPLY");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_READ_BLOCK_REPLY");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -684,7 +957,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_SUCCESS");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_READ_BLOCK_SUCCESS");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -693,7 +966,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_READ_BLOCK_FAIL");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_READ_BLOCK_FAIL");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -702,7 +975,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_REQUEST");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_WRITE_BLOCK_REQUEST");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -711,7 +984,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_RECEIVE");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_WRITE_BLOCK_RECEIVE");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -720,7 +993,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_REPLY");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_WRITE_BLOCK_REPLY");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -729,7 +1002,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_SUCCESS");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_WRITE_BLOCK_SUCCESS");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -738,7 +1011,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_OP_WRITE_BLOCK_FAIL");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "OP_WRITE_BLOCK_FAIL");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -748,7 +1021,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_NEW_BLOCK");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "NEW_BLOCK");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -757,7 +1030,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_APPEND_BLOCK");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "APPEND_BLOCK");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -766,7 +1039,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_END_BLOCK");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "END_BLOCK");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -775,7 +1048,7 @@ public class XTraceContext {
         if (context.get() == null) {
             return;// null;
         }
-        XTraceEvent event = createEvent(agent, agent.toUpperCase() + "_WRITE_ERROR");
+        XTraceEvent event = createEvent(agent, agent.toUpperCase() + delim + "WRITE_ERROR");
         event.sendReport();
         //return event.getNewMetadata();
     }
@@ -802,7 +1075,7 @@ public class XTraceContext {
         for (int i = 0; i < numCalls; i++) {
             XTraceEvent event = new XTraceEvent(getThreadContext().getOpIdLength());
             event.addEdge(getThreadContext());
-            event.put("Label", hostname.toUpperCase() + "_" + label);
+            event.put("Label", hostname.toUpperCase() + delim + label);
             event.put("Host", hostname);
             if (tId.get() != null) {
                 event.put("TaskID", tId.get());
@@ -830,7 +1103,7 @@ public class XTraceContext {
             hostname = "unknown";
         }
         event.put("Host", hostname);
-        event.put("Label", hostname.toUpperCase() + "_" + label);
+        event.put("Label", hostname.toUpperCase() + delim + label);
         if (tId.get() != null) {
             event.put("TaskID", tId.get());
         }

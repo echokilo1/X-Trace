@@ -160,6 +160,8 @@ public final class UdpReporter extends Reporter
     }*/
 		try {
 		  localSock.send(pkt);
+          //System.err.println("Sending UDP packet " + pkt.getPort() + " " + pkt.getLength());
+          
 		} catch (final IOException e) {
 			  //LOG.warn("Unable to send report", e);
 		}

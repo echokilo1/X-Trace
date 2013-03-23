@@ -19,7 +19,7 @@ import java.util.Random;
 public class XTraceSampling {
 
     /** Sample 10% of all incoming tasks (requests) by default */
-    private static int samplingPercentage = 10;
+    private static int samplingPercentage = 100;
     /** A counter of threads that have accessed this class */
     private static volatile long threadId = 0;
     /** 

@@ -22,6 +22,7 @@ public class XTraceCollector {
       store.initialize();
     } catch (XTraceException e) {
       System.out.println("Cannot start report store");
+      System.out.println(e.getMessage());
       return;
     }
 
@@ -33,7 +34,10 @@ public class XTraceCollector {
     String line = in.readLine();
     while(line != null) {
       String report = "";
-      while(line != null && !(line = in.readLine()).equals("X-Trace Report ver 1.0"))
+//            && !(line = in.readLine()).equals("X-Trace Report ver 1.0"))
+      while(line != null 
+            && ((line = in.readLine()) != null) 
+            && (!line.equals("X-Trace Report ver 1.0")))
         report += line + '\n';
       report = "X-Trace Report ver 1.0\n" + report;
       while(true) {

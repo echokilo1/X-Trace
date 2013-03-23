@@ -119,9 +119,11 @@ public final class XTraceServer {
 		sourcesExecutor = new ThreadPerTaskExecutor();
 		
 		// Default input sources
+//		String sourcesStr = "edu.berkeley.xtrace.server.UdpReportSource," +
+//		                    "edu.berkeley.xtrace.server.TcpReportSource," +
+//		                    "edu.berkeley.xtrace.server.ThriftReportSource";
 		String sourcesStr = "edu.berkeley.xtrace.server.UdpReportSource," +
-		                    "edu.berkeley.xtrace.server.TcpReportSource," +
-		                    "edu.berkeley.xtrace.server.ThriftReportSource";
+                            "edu.berkeley.xtrace.server.TcpReportSource";
 		
 		if (System.getProperty("xtrace.server.sources") != null) {
 			sourcesStr = System.getProperty("xtrace.server.sources");

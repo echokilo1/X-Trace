@@ -143,7 +143,7 @@ public final class FileTreeReportStore implements QueryableReportStore {
 			}
 			conn.setAutoCommit(false);
 		} catch (SQLException e) {
-			throw new XTraceException("Unable to connect to interal database: "
+			throw new XTraceException("Unable to connect to internal database: "
 					+ e.getSQLState(), e);
 		}
 		LOG.info("Successfully connected to the internal Derby database");
