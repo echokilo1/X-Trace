@@ -30,6 +30,11 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.nio.ByteBuffer;
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * X-trace task ID.
@@ -37,8 +42,8 @@ import java.util.Random;
  * @author George Porter
  */
 public final class TaskID implements Serializable {
-
     private static volatile Random r = null;
+    //private static volatile AtomicInteger ai = new AtomicInteger(1);
     private byte[] id;
 
     /**
@@ -66,11 +71,25 @@ public final class TaskID implements Serializable {
      */
     public TaskID(final int length) throws IllegalArgumentException {
         initialize(length);
-
+        //if (length == 8) {
+            /* NEW CODE, do not use random for now, always use 8 byte buffer */
+            //id = ByteBuffer.allocate(8).putLong(ai.getAndIncrement()).array();
+        // } else {
+            /* OLD CODE MODIFIED (was buggy and not random enough, needed better seed) */ 
+        int processId = ManagementFactory.getRuntimeMXBean().getName().hashCode();
         if (r == null) {
-            r = new Random();
+            try {
+                r = new Random(processId
+                               + System.nanoTime()
+                               + Thread.currentThread().getId()
+                               + InetAddress.getLocalHost().getHostName().hashCode());
+            } catch (UnknownHostException e) {
+                // Failed to get local host name; just use the other pieces                                                
+                r = new Random(processId
+                               + System.nanoTime()
+                               + Thread.currentThread().getId());
+            }
         }
-
         r.nextBytes(id);
     }
 

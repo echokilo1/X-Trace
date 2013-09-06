@@ -596,6 +596,7 @@ public final class XTraceMetadata {
             s = IoUtil.bytesToString(pack());
         } catch (final IOException e) {
             //LOG.warn("Internal I/O error: ", e);
+            //NOTE: This means that 0 is a special reserved number that cannot normally be used
             return "000000000000000000";
         }
 

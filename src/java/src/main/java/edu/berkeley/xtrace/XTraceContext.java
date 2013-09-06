@@ -102,6 +102,10 @@ public class XTraceContext {
         }
     }
 
+    public synchronized static void removeThreadContext() {
+        context.remove();
+    }
+
     public synchronized static void settId(String id) {
         tId.set(id);
     }
@@ -221,6 +225,7 @@ public class XTraceContext {
         event.put("Agent", agent);
         event.put("Label", hostname.toUpperCase() + delim + label);
         if (tId.get() != null) {
+            //"TaskID" should actually read TokenID -- it is the thing that stitches everything together, not the taskId field that holds the Op id (which establishes happens-before relationships)
             event.put("TaskID", tId.get());
         }
 
@@ -369,7 +374,7 @@ public class XTraceContext {
         event.sendReport();
     }
 
-    /* Request level sampling */
+    /* should really store taskId as actual taskId instead of creating a random taskId and storing this arg as an additional field */
     public static void newTrace(String taskId) {
         tId.set(taskId);
         newTrace();
